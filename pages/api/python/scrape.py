@@ -1,11 +1,25 @@
 from http.server import BaseHTTPRequestHandler
 import json
+import sys
+import os
+
+# Add the root directory to Python path so we can import vc_scraper
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 from vc_scraper import extract_companies
 
-def handle_request(event):
+def handler(request):
+    """
+    Vercel serverless function handler
+    """
+    if request.get('method', '') != 'POST':
+        return {
+            'statusCode': 405,
+            'body': json.dumps({'error': 'Method not allowed'})
+        }
+
     try:
         # Parse the request body
-        body = json.loads(event.get('body', '{}'))
+        body = json.loads(request.get('body', '{}'))
         url = body.get('url')
         
         if not url:
@@ -21,7 +35,7 @@ def handle_request(event):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'companies': [{'name': name, 'url': url} for name, url in companies]
+                'companies': [{'name': name, 'url': company_url} for name, company_url in companies]
             })
         }
         
@@ -41,13 +55,10 @@ class Handler(BaseHTTPRequestHandler):
         event = {'body': body.decode('utf-8')}
         
         # Handle the request
-        response = handle_request(event)
+        response = handler(event)
         
         # Send response
         self.send_response(response['statusCode'])
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        self.wfile.write(response['body'].encode('utf-8'))
-
-def handler(event, context):
-    return handle_request(event) 
+        self.wfile.write(response['body'].encode('utf-8')) 

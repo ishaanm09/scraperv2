@@ -1,6 +1,6 @@
-requests
-beautifulsoup4
-tldextract
-playwright
+requests==2.31.0
+beautifulsoup4==4.12.3
+tldextract==5.1.1
+playwright==1.42.0
 streamlit
 pandas

@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
         {
-            "src": "pages/api/python/*.py",
+            "src": "pages/api/python/**/*.py",
             "use": "@vercel/python"
         },
         {
@@ -13,7 +13,7 @@
     "routes": [
         {
             "src": "/api/python/(.*)",
-            "dest": "pages/api/python/$1"
+            "dest": "/api/python/$1"
         },
         {
             "src": "/(.*)",
