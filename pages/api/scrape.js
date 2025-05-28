@@ -11,11 +11,7 @@ export default async function handler(req, res) {
 
   try {
     // Call our Python API endpoint
-    const apiUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}/api/python/scrape`
-      : 'http://localhost:3000/api/python/scrape';
-
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/python/scrape`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,15 +19,15 @@ export default async function handler(req, res) {
       body: JSON.stringify({ url }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to scrape companies');
+      const errorData = await response.json();
+      return res.status(response.status).json({ error: errorData.error || 'Failed to scrape companies' });
     }
 
+    const data = await response.json();
     return res.status(200).json(data);
   } catch (error) {
     console.error('Scraping error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 } 
