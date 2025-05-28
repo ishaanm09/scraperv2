@@ -1,0 +1,6 @@
+requests
+beautifulsoup4
+tldextract
+playwright
+streamlit
+pandas
