@@ -1,5 +1,4 @@
-requests==2.31.0
-beautifulsoup4==4.12.3
-tldextract==5.1.1
-playwright==1.42.0streamlit
-pandas
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+playwright>=1.40.0
+tldextract>=5.1.1
