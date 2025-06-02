@@ -3,6 +3,11 @@ import { spawn } from 'child_process';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+// Define the NodeJS.ErrnoException type for spawn errors
+interface SpawnError extends Error {
+  code?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -55,7 +60,7 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      pythonProcess.on('error', (error) => {
+      pythonProcess.on('error', (error: SpawnError) => {
         console.error('Python process error:', error);
         if (error.code === 'ENOENT') {
           reject(new Error(`Python not found at ${pythonPath}. Please ensure the virtual environment is properly set up.`));
