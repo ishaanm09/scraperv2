@@ -3,6 +3,14 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "functions": {
+    "app/api/scrape/route.ts": {
+      "runtime": "edge"
+    },
+    "app/api/python/scrape/route.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "builds": [
     {
       "src": "vc_scraper.py",
