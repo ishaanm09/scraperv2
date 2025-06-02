@@ -23,12 +23,12 @@ export async function POST(req: NextRequest) {
     const rootDir = process.cwd();
     const scriptPath = path.join(rootDir, 'vc_scraper.py');
     
-    // Try different Python paths
+    // Vercel-specific Python paths
     const pythonPaths = [
+      'python3',  // Use system Python first
+      'python',   // Fallback to generic Python
       '/var/lang/bin/python3',  // Vercel's Python path
-      path.join(rootDir, '.venv', 'bin', 'python3'),  // Local venv
-      'python3',  // System Python
-      'python'    // Fallback
+      path.join(rootDir, '.venv/bin/python3'),  // Local venv
     ];
 
     let pythonPath: string | null = null;
@@ -39,13 +39,34 @@ export async function POST(req: NextRequest) {
       try {
         await new Promise((resolve, reject) => {
           const testProcess = spawn(testPath, ['--version']);
-          testProcess.on('close', (code) => code === 0 ? resolve(code) : reject());
-          testProcess.on('error', reject);
+          
+          let output = '';
+          testProcess.stdout.on('data', (data) => {
+            output += data.toString();
+          });
+          
+          testProcess.stderr.on('data', (data) => {
+            output += data.toString();
+          });
+          
+          testProcess.on('close', (code) => {
+            if (code === 0) {
+              console.log(`Found Python at ${testPath}: ${output.trim()}`);
+              resolve(code);
+            } else {
+              reject(new Error(`Python test failed with code ${code}: ${output}`));
+            }
+          });
+          
+          testProcess.on('error', (err) => {
+            reject(err);
+          });
         });
         pythonPath = testPath;
         break;
       } catch (error) {
         lastError = error as Error;
+        console.log(`Failed to use Python at ${testPath}:`, error);
         continue;
       }
     }
@@ -58,8 +79,10 @@ export async function POST(req: NextRequest) {
     console.log('Script path:', scriptPath);
     console.log('URL:', url);
 
-    // Run the Python script
+    // Run the Python script with enhanced error handling
+    let pythonOutput = '';
     let pythonError = '';
+    
     await new Promise((resolve, reject) => {
       const pythonProcess = spawn(pythonPath!, [
         scriptPath,
@@ -68,17 +91,22 @@ export async function POST(req: NextRequest) {
         env: {
           ...process.env,
           PYTHONPATH: process.cwd(),
-          PYTHONUNBUFFERED: '1'
+          PYTHONUNBUFFERED: '1',
+          PATH: `${process.env.PATH}:/var/lang/bin:/var/task/node_modules/.bin`,
+          LAMBDA_TASK_ROOT: process.cwd(),
         }
       });
 
       pythonProcess.stdout.on('data', (data) => {
-        console.log(`Python Output: ${data}`);
+        const output = data.toString();
+        pythonOutput += output;
+        console.log(`Python Output: ${output}`);
       });
 
       pythonProcess.stderr.on('data', (data) => {
-        pythonError += data.toString();
-        console.error(`Python Error: ${data}`);
+        const error = data.toString();
+        pythonError += error;
+        console.error(`Python Error: ${error}`);
       });
 
       pythonProcess.on('close', (code) => {
@@ -86,7 +114,7 @@ export async function POST(req: NextRequest) {
         if (code === 0) {
           resolve(code);
         } else {
-          reject(new Error(pythonError || `Python process exited with code ${code}`));
+          reject(new Error(pythonError || pythonOutput || `Python process exited with code ${code}`));
         }
       });
 
