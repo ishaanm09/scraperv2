@@ -15,13 +15,19 @@ export async function POST(req: NextRequest) {
     const decodedUrl = decodeURIComponent(url);
 
     // Run the Python script
+    let pythonError = '';
     await new Promise((resolve, reject) => {
       const pythonProcess = spawn('python', [
         path.join(process.cwd(), 'vc_scraper.py'),
         decodedUrl
       ]);
 
+      pythonProcess.stdout.on('data', (data) => {
+        console.log(`Python Output: ${data}`);
+      });
+
       pythonProcess.stderr.on('data', (data) => {
+        pythonError += data.toString();
         console.error(`Python Error: ${data}`);
       });
 
@@ -29,28 +35,39 @@ export async function POST(req: NextRequest) {
         if (code === 0) {
           resolve(code);
         } else {
-          reject(new Error(`Python process exited with code ${code}`));
+          reject(new Error(pythonError || `Python process exited with code ${code}`));
         }
+      });
+
+      pythonProcess.on('error', (error) => {
+        reject(new Error(`Failed to start Python process: ${error.message}`));
       });
     });
 
-    // Read the generated CSV file
-    const csvContent = await readFile(
-      path.join(process.cwd(), 'portfolio_companies.csv'),
-      'utf-8'
-    );
-
-    // Return the CSV file
-    return new NextResponse(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename=portfolio_companies.csv',
-      },
-    });
+    // Check if the CSV file exists
+    const csvPath = path.join(process.cwd(), 'portfolio_companies.csv');
+    try {
+      const csvContent = await readFile(csvPath, 'utf-8');
+      
+      // Return the CSV file
+      return new NextResponse(csvContent, {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename=portfolio_companies.csv',
+        },
+      });
+    } catch (error) {
+      console.error('Error reading CSV file:', error);
+      return NextResponse.json(
+        { error: 'Failed to read the generated CSV file' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in scraping route:', error);
+    // Ensure we always return a properly formatted JSON response
     return NextResponse.json(
-      { error: 'Failed to scrape the website' },
+      { error: error instanceof Error ? error.message : 'Failed to scrape the website' },
       { status: 500 }
     );
   }
