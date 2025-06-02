@@ -15,12 +15,15 @@ export default function Home() {
     setCsvBlob(null);
     
     try {
+      // Properly encode the URL if it contains query parameters
+      const processedUrl = url.includes('&') ? encodeURIComponent(url) : url;
+      
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: processedUrl }),
       });
       
       if (!response.ok) {

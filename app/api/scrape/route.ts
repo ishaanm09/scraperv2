@@ -11,11 +11,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
+    // Decode the URL if it was encoded
+    const decodedUrl = decodeURIComponent(url);
+
     // Run the Python script
     await new Promise((resolve, reject) => {
       const pythonProcess = spawn('python', [
-        path.join(process.cwd(), '..', 'Scraper', 'vc_scraper.py'),
-        url
+        path.join(process.cwd(), 'vc_scraper.py'),
+        decodedUrl
       ]);
 
       pythonProcess.stderr.on('data', (data) => {
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     // Read the generated CSV file
     const csvContent = await readFile(
-      path.join(process.cwd(), '..', 'Scraper', 'portfolio_companies.csv'),
+      path.join(process.cwd(), 'portfolio_companies.csv'),
       'utf-8'
     );
 
