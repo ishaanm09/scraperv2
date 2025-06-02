@@ -27,10 +27,37 @@ export async function POST(req: NextRequest) {
     const rootDir = process.cwd();
     const scriptPath = path.join(rootDir, 'vc_scraper.py');
     
-    // Use system Python in production
-    const pythonPath = 'python3';
+    // Try different Python paths
+    const pythonPaths = [
+      '/var/lang/bin/python3',  // Vercel's Python path
+      path.join(rootDir, '.venv', 'bin', 'python3'),  // Local venv
+      'python3',  // System Python
+      'python'    // Fallback
+    ];
 
-    console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Development');
+    let pythonPath: string | null = null;
+    let lastError: Error | null = null;
+
+    // Try each Python path until one works
+    for (const testPath of pythonPaths) {
+      try {
+        await new Promise((resolve, reject) => {
+          const testProcess = spawn(testPath, ['--version']);
+          testProcess.on('close', (code) => code === 0 ? resolve(code) : reject());
+          testProcess.on('error', reject);
+        });
+        pythonPath = testPath;
+        break;
+      } catch (error) {
+        lastError = error as Error;
+        continue;
+      }
+    }
+
+    if (!pythonPath) {
+      throw new Error(`No working Python installation found. Last error: ${lastError?.message}`);
+    }
+
     console.log('Using Python path:', pythonPath);
     console.log('Script path:', scriptPath);
     console.log('URL:', decodedUrl);
@@ -38,7 +65,7 @@ export async function POST(req: NextRequest) {
     // Run the Python script
     let pythonError = '';
     await new Promise((resolve, reject) => {
-      const pythonProcess = spawn(pythonPath, [
+      const pythonProcess = spawn(pythonPath!, [
         scriptPath,
         decodedUrl
       ], {
@@ -69,11 +96,7 @@ export async function POST(req: NextRequest) {
 
       pythonProcess.on('error', (error: SpawnError) => {
         console.error('Python process error:', error);
-        if (error.code === 'ENOENT') {
-          reject(new Error(`Python not found at ${pythonPath}. Please ensure Python is installed and in PATH.`));
-        } else {
-          reject(new Error(`Failed to start Python process: ${error.message}`));
-        }
+        reject(new Error(`Failed to start Python process: ${error.message}`));
       });
     });
 
