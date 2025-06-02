@@ -17,12 +17,12 @@ st.markdown("""
     <style>
     /* Modern styling */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
+
     /* Base styles */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif !important;
     }
-    
+
     /* Container styling */
     .main > div {
         padding: 2rem 3rem 3rem 3rem;
@@ -120,7 +120,7 @@ if st.button("Extract Companies 🚀"):
         st.error("Please enter a portfolio URL")
     else:
         with st.spinner("🔍 Analyzing portfolio page..."):
-            try:
+        try:
                 # Extract companies
                 companies = extract_companies(url)
                 
@@ -147,7 +147,7 @@ if st.button("Extract Companies 🚀"):
                     st.download_button(
                         "📥 Download CSV",
                         output.getvalue(),
-                        file_name="portfolio_companies.csv",
+                               file_name="portfolio_companies.csv",
                         mime="text/csv"
                     )
                     
@@ -159,7 +159,7 @@ if st.button("Extract Companies 🚀"):
                     if len(companies) > 5:
                         st.caption(f"Showing 5 of {len(companies)} companies. Download the CSV to see all.")
                     
-            except Exception as e:
+        except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
 
 # Footer

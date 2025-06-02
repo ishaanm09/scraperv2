@@ -22,16 +22,15 @@ export default function Home() {
         body: JSON.stringify({ url }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to scrape companies');
+        throw new Error(data.error || 'Failed to scrape companies');
       }
 
-      const data = await response.json();
       setCompanies(data.companies);
     } catch (err) {
       setError(err.message);
-      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -42,7 +41,7 @@ export default function Home() {
 
     const csvContent = [
       ['Company', 'URL'],
-      ...companies.map(company => [company.name, company.url])
+      ...companies.map(([company, url]) => [company, url])
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -123,12 +122,12 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {companies.slice(0, 5).map((company, index) => (
+                    {companies.slice(0, 5).map(([company, url], index) => (
                       <tr key={index} className="border-b border-gray-200">
-                        <td className="px-4 py-3 text-sm text-gray-900">{company.name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{company}</td>
                         <td className="px-4 py-3 text-sm text-blue-600 hover:text-blue-800">
-                          <a href={company.url} target="_blank" rel="noopener noreferrer">
-                            {company.url}
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            {url}
                           </a>
                         </td>
                       </tr>

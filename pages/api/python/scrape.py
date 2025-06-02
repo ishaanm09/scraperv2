@@ -1,3 +1,4 @@
+from http.server import BaseHTTPRequestHandler
 import json
 import sys
 import os
@@ -42,4 +43,22 @@ def handler(request):
         return {
             'statusCode': 500,
             'body': json.dumps({'error': str(e)})
-        } 
+        }
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        # Get the content length
+        content_length = int(self.headers.get('Content-Length', 0))
+        
+        # Read the request body
+        body = self.rfile.read(content_length)
+        event = {'body': body.decode('utf-8')}
+        
+        # Handle the request
+        response = handler(event)
+        
+        # Send response
+        self.send_response(response['statusCode'])
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(response['body'].encode('utf-8')) 
