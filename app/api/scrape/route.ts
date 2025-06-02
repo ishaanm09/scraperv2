@@ -8,6 +8,10 @@ interface SpawnError extends Error {
   code?: string;
 }
 
+// Configure the route to use Edge Runtime
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -23,15 +27,8 @@ export async function POST(req: NextRequest) {
     const rootDir = process.cwd();
     const scriptPath = path.join(rootDir, 'vc_scraper.py');
     
-    // Choose Python path based on environment
-    let pythonPath: string;
-    if (process.env.VERCEL) {
-      // On Vercel, use the system Python
-      pythonPath = 'python3';
-    } else {
-      // In development, use the virtual environment
-      pythonPath = path.join(rootDir, '.venv', 'bin', 'python3');
-    }
+    // Use system Python in production
+    const pythonPath = 'python3';
 
     console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Development');
     console.log('Using Python path:', pythonPath);

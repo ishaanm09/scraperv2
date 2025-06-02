@@ -1,13 +1,6 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "installCommand": "npm install && pip install -r requirements.txt",
-  "framework": "nextjs",
-  "functions": {
-    "app/api/scrape/route.ts": {
-      "runtime": "@vercel/node@18",
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  }
+  "installCommand": "pip install -r requirements.txt && npm install",
+  "framework": "nextjs"
 } 
