@@ -14,33 +14,37 @@ export async function POST(req: NextRequest) {
     // Decode the URL if it was encoded
     const decodedUrl = decodeURIComponent(url);
 
-    // Run the Python script
+    const scriptPath = path.join(process.cwd(), 'vc_scraper.py');
+    const wrapperPath = path.join(process.cwd(), 'run-scraper.sh');
+
+    // Run the Python script using the wrapper
     let pythonError = '';
     await new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python', [
-        path.join(process.cwd(), 'vc_scraper.py'),
+      const process = spawn('bash', [
+        wrapperPath,
+        scriptPath,
         decodedUrl
       ]);
 
-      pythonProcess.stdout.on('data', (data) => {
-        console.log(`Python Output: ${data}`);
+      process.stdout.on('data', (data) => {
+        console.log(`Script Output: ${data}`);
       });
 
-      pythonProcess.stderr.on('data', (data) => {
+      process.stderr.on('data', (data) => {
         pythonError += data.toString();
-        console.error(`Python Error: ${data}`);
+        console.error(`Script Error: ${data}`);
       });
 
-      pythonProcess.on('close', (code) => {
+      process.on('close', (code) => {
         if (code === 0) {
           resolve(code);
         } else {
-          reject(new Error(pythonError || `Python process exited with code ${code}`));
+          reject(new Error(pythonError || `Script exited with code ${code}`));
         }
       });
 
-      pythonProcess.on('error', (error) => {
-        reject(new Error(`Failed to start Python process: ${error.message}`));
+      process.on('error', (error) => {
+        reject(new Error(`Failed to run script: ${error.message}`));
       });
     });
 
