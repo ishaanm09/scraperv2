@@ -23,78 +23,31 @@ export async function POST(req: NextRequest) {
     const rootDir = process.cwd();
     const scriptPath = path.join(rootDir, 'vc_scraper.py');
     
-    // Vercel-specific Python paths
-    const pythonPaths = [
-      'python3',  // Use system Python first
-      'python',   // Fallback to generic Python
-      '/var/lang/bin/python3',  // Vercel's Python path
-      path.join(rootDir, '.venv/bin/python3'),  // Local venv
-    ];
-
-    let pythonPath: string | null = null;
-    let lastError: Error | null = null;
-
-    // Try each Python path until one works
-    for (const testPath of pythonPaths) {
-      try {
-        await new Promise((resolve, reject) => {
-          const testProcess = spawn(testPath, ['--version']);
-          
-          let output = '';
-          testProcess.stdout.on('data', (data) => {
-            output += data.toString();
-          });
-          
-          testProcess.stderr.on('data', (data) => {
-            output += data.toString();
-          });
-          
-          testProcess.on('close', (code) => {
-            if (code === 0) {
-              console.log(`Found Python at ${testPath}: ${output.trim()}`);
-              resolve(code);
-            } else {
-              reject(new Error(`Python test failed with code ${code}: ${output}`));
-            }
-          });
-          
-          testProcess.on('error', (err) => {
-            reject(err);
-          });
-        });
-        pythonPath = testPath;
-        break;
-      } catch (error) {
-        lastError = error as Error;
-        console.log(`Failed to use Python at ${testPath}:`, error);
-        continue;
-      }
-    }
-
-    if (!pythonPath) {
-      throw new Error(`No working Python installation found. Last error: ${lastError?.message}`);
-    }
+    // In Vercel's environment, Python should be available directly
+    const pythonPath = 'python3';
 
     console.log('Using Python path:', pythonPath);
     console.log('Script path:', scriptPath);
     console.log('URL:', url);
+    console.log('Current directory:', rootDir);
+    console.log('Directory contents:', await readFile(rootDir, { withFileTypes: true }));
 
     // Run the Python script with enhanced error handling
     let pythonOutput = '';
     let pythonError = '';
     
     await new Promise((resolve, reject) => {
-      const pythonProcess = spawn(pythonPath!, [
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         url
       ], {
         env: {
           ...process.env,
-          PYTHONPATH: process.cwd(),
+          PYTHONPATH: rootDir,
           PYTHONUNBUFFERED: '1',
-          PATH: `${process.env.PATH}:/var/lang/bin:/var/task/node_modules/.bin`,
-          LAMBDA_TASK_ROOT: process.cwd(),
-        }
+          PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin:/var/lang/bin:/var/task/node_modules/.bin'
+        },
+        cwd: rootDir
       });
 
       pythonProcess.stdout.on('data', (data) => {
@@ -125,7 +78,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Check if the CSV file exists
-    const csvPath = path.join(process.cwd(), 'portfolio_companies.csv');
+    const csvPath = path.join(rootDir, 'portfolio_companies.csv');
     try {
       const csvContent = await readFile(csvPath, 'utf-8');
       

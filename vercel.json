@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "installCommand": "npm install && pip install -r requirements.txt",
   "framework": "nextjs",
   "functions": {
     "app/api/scrape/route.ts": {
@@ -16,15 +16,20 @@
   "builds": [
     {
       "src": "vc_scraper.py",
-      "use": "@vercel/python",
+      "use": "@vercel/python@3.1.0",
       "config": {
         "maxLambdaSize": "15mb",
-        "runtime": "python3.9"
+        "runtime": "python3.9",
+        "installCommand": "pip install -r requirements.txt"
       }
     },
     {
       "src": "package.json",
       "use": "@vercel/next"
     }
-  ]
+  ],
+  "env": {
+    "PYTHONPATH": "/var/task",
+    "PYTHONUNBUFFERED": "1"
+  }
 } 

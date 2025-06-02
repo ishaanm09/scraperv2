@@ -15,8 +15,13 @@ export async function POST(req: NextRequest) {
     // Decode the URL if it was encoded
     const decodedUrl = decodeURIComponent(url);
 
-    // Call the Python script using the Vercel Function URL
-    const response = await fetch('/api/python/scrape', {
+    // Get the host from the request
+    const protocol = req.headers.get('x-forwarded-proto') || 'http';
+    const host = req.headers.get('host') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+
+    // Call the Python script using an absolute URL
+    const response = await fetch(`${baseUrl}/api/python/scrape`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
