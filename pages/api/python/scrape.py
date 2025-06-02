@@ -3,9 +3,9 @@ import json
 import sys
 import os
 
-# Add the root directory to Python path so we can import vc_scraper
+# Add the root directory to Python path so we can import scraper
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-from vc_scraper import extract_companies
+from scraper import scrape_to_csv
 
 def handler(request):
     """
@@ -28,15 +28,17 @@ def handler(request):
                 'body': json.dumps({'error': 'URL is required'})
             }
             
-        # Extract companies using the scraper
-        companies = extract_companies(url)
+        # Get CSV data using the scraper
+        csv_data = scrape_to_csv(url)
         
-        # Return the results
+        # Return the CSV data
         return {
             'statusCode': 200,
-            'body': json.dumps({
-                'companies': [{'name': name, 'url': company_url} for name, company_url in companies]
-            })
+            'headers': {
+                'Content-Type': 'text/csv',
+                'Content-Disposition': 'attachment; filename=portfolio_companies.csv'
+            },
+            'body': csv_data
         }
         
     except Exception as e:
@@ -59,6 +61,7 @@ class Handler(BaseHTTPRequestHandler):
         
         # Send response
         self.send_response(response['statusCode'])
-        self.send_header('Content-Type', 'application/json')
+        for key, value in response.get('headers', {}).items():
+            self.send_header(key, value)
         self.end_headers()
-        self.wfile.write(response['body'].encode('utf-8')) 
+        self.wfile.write(response['body'].encode('utf-8'))

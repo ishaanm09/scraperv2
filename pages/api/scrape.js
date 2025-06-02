@@ -1,5 +1,3 @@
-import { scrape_to_csv } from '../../scraper';
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -12,8 +10,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const csvData = await scrape_to_csv(url);
+    // Forward the request to the Python endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/python/scrape`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const csvData = await response.text();
     
+    // Forward the CSV response
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=portfolio_companies.csv');
     res.status(200).send(csvData);
