@@ -5,13 +5,11 @@ export default function Home() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [companies, setCompanies] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setCompanies(null);
 
     try {
       const response = await fetch('/api/scrape', {
@@ -22,13 +20,22 @@ export default function Home() {
         body: JSON.stringify({ url }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to scrape companies');
+        throw new Error('Failed to scrape portfolio');
       }
 
-      setCompanies(data.companies);
+      // Get the CSV data as a blob
+      const blob = await response.blob();
+      
+      // Create a download link
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = 'portfolio_companies.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -36,29 +43,11 @@ export default function Home() {
     }
   };
 
-  const downloadCSV = () => {
-    if (!companies) return;
-
-    const csvContent = [
-      ['Company', 'URL'],
-      ...companies.map(([company, url]) => [company, url])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'portfolio_companies.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
         <title>VC Portfolio Scraper</title>
+        <meta name="description" content="Extract portfolio companies from any VC website" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -93,57 +82,22 @@ export default function Home() {
         </form>
 
         {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
           </div>
         )}
 
-        {companies && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Found {companies.length} Companies
-                </h2>
-                <button
-                  onClick={downloadCSV}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                >
-                  Download CSV
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Company</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">URL</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {companies.slice(0, 5).map(([company, url], index) => (
-                      <tr key={index} className="border-b border-gray-200">
-                        <td className="px-4 py-3 text-sm text-gray-900">{company}</td>
-                        <td className="px-4 py-3 text-sm text-blue-600 hover:text-blue-800">
-                          <a href={url} target="_blank" rel="noopener noreferrer">
-                            {url}
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {companies.length > 5 && (
-                  <p className="mt-4 text-sm text-gray-600">
-                    Showing 5 of {companies.length} companies. Download the CSV to see all.
-                  </p>
-                )}
-              </div>
+        {loading && (
+          <div className="text-center py-12">
+            <div className="animate-pulse text-gray-600">
+              Scraping portfolio companies...
             </div>
+            <p className="mt-2 text-sm text-gray-500">
+              This may take a few moments depending on the website
+            </p>
           </div>
         )}
       </main>
     </div>
   );
-} 
+}
