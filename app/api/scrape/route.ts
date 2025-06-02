@@ -14,37 +14,54 @@ export async function POST(req: NextRequest) {
     // Decode the URL if it was encoded
     const decodedUrl = decodeURIComponent(url);
 
-    const scriptPath = path.join(process.cwd(), 'vc_scraper.py');
-    const wrapperPath = path.join(process.cwd(), 'run-scraper.sh');
+    // Get absolute paths
+    const rootDir = process.cwd();
+    const scriptPath = path.join(rootDir, 'vc_scraper.py');
+    const pythonPath = path.join(rootDir, '.venv', 'bin', 'python3');
 
-    // Run the Python script using the wrapper
+    console.log('Using Python path:', pythonPath);
+    console.log('Script path:', scriptPath);
+    console.log('URL:', decodedUrl);
+
+    // Run the Python script
     let pythonError = '';
     await new Promise((resolve, reject) => {
-      const process = spawn('bash', [
-        wrapperPath,
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         decodedUrl
-      ]);
-
-      process.stdout.on('data', (data) => {
-        console.log(`Script Output: ${data}`);
-      });
-
-      process.stderr.on('data', (data) => {
-        pythonError += data.toString();
-        console.error(`Script Error: ${data}`);
-      });
-
-      process.on('close', (code) => {
-        if (code === 0) {
-          resolve(code);
-        } else {
-          reject(new Error(pythonError || `Script exited with code ${code}`));
+      ], {
+        env: {
+          ...process.env,
+          PYTHONPATH: process.cwd(),
+          PYTHONUNBUFFERED: '1'
         }
       });
 
-      process.on('error', (error) => {
-        reject(new Error(`Failed to run script: ${error.message}`));
+      pythonProcess.stdout.on('data', (data) => {
+        console.log(`Python Output: ${data}`);
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        pythonError += data.toString();
+        console.error(`Python Error: ${data}`);
+      });
+
+      pythonProcess.on('close', (code) => {
+        console.log(`Python process exited with code ${code}`);
+        if (code === 0) {
+          resolve(code);
+        } else {
+          reject(new Error(pythonError || `Python process exited with code ${code}`));
+        }
+      });
+
+      pythonProcess.on('error', (error) => {
+        console.error('Python process error:', error);
+        if (error.code === 'ENOENT') {
+          reject(new Error(`Python not found at ${pythonPath}. Please ensure the virtual environment is properly set up.`));
+        } else {
+          reject(new Error(`Failed to start Python process: ${error.message}`));
+        }
       });
     });
 
